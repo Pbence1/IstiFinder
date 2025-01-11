@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Istikereső</title>
+
+    <link rel="apple-touch-icon" sizes="180x180" href="../favicon_io/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="../favicon_io/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="../favicon_io/favicon-16x16.png">
+<link rel="manifest" href="../favicon_io/site.webmanifest">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-image: url(../mcfalfirka.jpg); /* Adjust background as needed */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        #board {
+            display: none; /* Initially hidden */
+            margin: 20px auto;
+            grid-template-columns: repeat(5, 40px);
+            grid-template-rows: repeat(5, 40px);
+            gap: 5px;
+            display: grid;
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            background-color: #ddd;
+            border: 1px solid #aaa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .revealed {
+            background-color: #6a17a4;
+        }
+        .mine {
+            background-image: url(../lilpisti.png); /* Adjust path as needed */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        .empty {
+            background-color: #a2a2a2;
+        }
+        .flagged {
+            background-color: #ff0000; /* Red background for flagged cells */
+            color: white;
+            font-size: 20px;
+            text-align: center;
+            line-height: 40px;
+        }
+        .correct-flag {
+            background-color: #28a745; /* Green flag for correctly flagged cells when game over */
+            color: white;
+            font-size: 20px;
+            text-align: center;
+            line-height: 40px;
+        }
+        #game-container {
+            padding-bottom: 330px;
+        }
+        #start-button, #restart-button, #rules-button {
+            font-size: 20px;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #start-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+        }
+        #restart-button {
+            display: none;
+            background-color: #f44336;
+            color: white;
+            border: none;
+        }
+        #flag-count {
+            margin-top: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <h1 style="border: 1px solid black; background-color: white;">IstiKereső</h1>
+        <button id="start-button">Inditás</button>
+        <button id="rules-button">Játékszabályok</button> <!-- Added Rules button -->
+        <div id="board"></div>
+        <button id="restart-button" onclick="resetGame()">Újrainditás</button>
+        <div id="flag-count" style="border: 1px solid black; background-color: white;">Flagged: 0/5</div> <!-- Flag count display -->
+    </div>
+
+    <script>
+        const rows = 5;
+        const cols = 5;
+        const numMines = 5;
+        let board = [];
+        let revealed = [];
+        let flagged = [];
+        let gameOver = false;
+        let isFirstClick = true;
+        let flagCount = 0; // Track the number of flags
+        let selectedCell = null; // To store the currently selected cell
+
+        // Load sound effects
+        const startSound = new Audio("GameStartSound.MP3");
+        const mineSound = new Audio('GameOverSound.MP3');
+        const winSound = new Audio('WinSound.MP3');
+        const revealSound = new Audio('RevealSound.MP3');
+        const flagSound = new Audio('FlagSound.MP3'); // Add flag sound
+
+        // Initialize the game
+        function initializeBoard() {
+            board = Array.from({ length: rows }, () => Array(cols).fill(0));
+            revealed = Array.from({ length: rows }, () => Array(cols).fill(false));
+            flagged = Array.from({ length: rows }, () => Array(cols).fill(false)); // Initialize flagged state
+            flagCount = 0; // Reset flag count
+            gameOver = false;
+            isFirstClick = true;
+
+            let minesPlaced = 0;
+            while (minesPlaced < numMines) {
+                const r = Math.floor(Math.random() * rows);
+                const c = Math.floor(Math.random() * cols);
+                if (board[r][c] === 0) {
+                    board[r][c] = 'X';
+                    minesPlaced++;
+                }
+            }
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (board[r][c] === 'X') continue;
+                    let count = 0;
+                    for (let dr = -1; dr <= 1; dr++) {
+                        for (let dc = -1; dc <= 1; dc++) {
+                            const nr = r + dr;
+                            const nc = c + dc;
+                            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && board[nr][nc] === 'X') {
+                                count++;
+                            }
+                        }
+                    }
+                    board[r][c] = count;
+                }
+            }
+
+            renderBoard();
+        }
+
+        function renderBoard() {
+            const boardContainer = document.getElementById('board');
+            boardContainer.innerHTML = '';
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    
+                    if (flagged[r][c]) {
+                        if (gameOver && board[r][c] === 'X') {
+                            cell.classList.add('correct-flag'); // Green flag for correct bomb flagging
+                        } else {
+                            cell.classList.add('flagged');
+                        }
+                        cell.textContent = '🍺';  // Flag symbol when flagged
+                    } else if (revealed[r][c]) {
+                        if (board[r][c] === 'X') {
+                            cell.classList.add('mine');
+                        } else if (board[r][c] === 0) {
+                            cell.classList.add('empty');
+                            cell.textContent = '';
+                        } else {
+                            cell.textContent = board[r][c];
+                        }
+                    }
+
+                    // Left-click to reveal, right-click or 'F' to flag
+                    cell.onclick = () => handleCellClick(r, c);
+                    cell.oncontextmenu = (e) => handleRightClick(r, c, e);  // Right-click to flag
+                    cell.onmousedown = (e) => handleMouseDown(r, c, e);  // Handle mouse down event to store the selected cell
+
+                    boardContainer.appendChild(cell);
+                }
+            }
+
+            // Update flag count display
+            document.getElementById('flag-count').textContent = `Flagged: ${flagCount}/5`;
+        }
+
+        // Store the selected cell for flag removal
+        function handleMouseDown(r, c, e) {
+            if (e.button === 0) { // Left mouse button
+                selectedCell = { r, c }; // Store the coordinates of the clicked cell
+            }
+        }
+
+        function handleCellClick(r, c) {
+            if (gameOver || revealed[r][c] || flagged[r][c]) return;
+
+            revealed[r][c] = true;
+
+            if (board[r][c] === 'X') {
+                mineSound.play();
+                gameOver = true;
+                revealAllMines();
+                renderBoard();
+            } else {
+                revealSound.play();
+                if (board[r][c] === 0) {
+                    revealAdjacentCells(r, c);
+                }
+                renderBoard();
+                checkWinCondition();
+            }
+        }
+
+        function handleRightClick(r, c, e) {
+            e.preventDefault();  // Prevent the default right-click menu
+            if (gameOver || revealed[r][c] || flagCount >= 5) return;  // Stop flagging if 5 flags are already placed
+
+            if (flagged[r][c]) {
+                flagged[r][c] = false;
+                flagCount--;
+            } else {
+                flagged[r][c] = true;
+                flagCount++;
+                flagSound.play();
+            }
+
+            renderBoard();
+        }
+
+        function removeFlag() {
+            if (selectedCell && flagged[selectedCell.r][selectedCell.c]) {
+                flagged[selectedCell.r][selectedCell.c] = false;
+                flagCount--;
+                renderBoard();
+                selectedCell = null; // Reset the selected cell
+            }
+        }
+
+        // Event listener for middle mouse button (mouse scroll wheel click)
+        document.addEventListener('mousedown', (e) => {
+            if (e.button === 1) { // Middle mouse button (wheel click)
+                removeFlag();
+            }
+        });
+
+        function revealAdjacentCells(r, c) {
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    const nr = r + dr;
+                    const nc = c + dc;
+                    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !revealed[nr][nc]) {
+                        revealed[nr][nc] = true;
+                        if (board[nr][nc] === 0) {
+                            revealAdjacentCells(nr, nc);
+                        }
+                    }
+                }
+            }
+        }
+
+        function revealAllMines() {
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (board[r][c] === 'X') {
+                        revealed[r][c] = true;
+                    }
+                }
+            }
+        }
+
+        function checkWinCondition() {
+            let cellsRevealed = 0;
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (revealed[r][c] && board[r][c] !== 'X') {
+                        cellsRevealed++;
+                    }
+                }
+            }
+            if (cellsRevealed === (rows * cols - numMines)) {
+                winSound.play();
+                alert("Congratulations! You win!");
+                gameOver = true;
+            }
+        }
+
+        function resetGame() {
+            initializeBoard();
+            document.getElementById('start-button').style.display = 'inline'; // Show start button again
+            document.getElementById('board').style.display = 'none'; // Hide the board
+            document.getElementById('restart-button').style.display = 'none'; // Hide restart button
+        }
+
+        // Show rules when the "Rules" button is clicked
+        document.getElementById('rules-button').onclick = function() {
+            alert('Játékszabályok:\n1. Cél a bombák elkerülése.\n2. Kattints egy mezőre a kinyitásához.\n3. Jobbklikkel helyezhetsz el zászlót a gyanús mezőkön.\n4. Zászlót elöször bal klikk majd görgö benyomással lehet törölni.');
+        };
+
+        // Start the game when the start button is clicked
+        document.getElementById('start-button').onclick = function() {
+            startSound.play();  // Play sound when the Start button is clicked
+            initializeBoard();
+            this.style.display = 'none'; // Hide start button
+            document.getElementById('board').style.display = 'grid'; // Show the board
+            document.getElementById('restart-button').style.display = 'inline'; // Show restart button
+        };
+    </script>
+
+</body>
+</html>
