@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Istikereső</title>
 
-    <link rel="apple-touch-icon" sizes="180x180" href="../favicon_io/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="../favicon_io/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="../favicon_io/favicon-16x16.png">
-<link rel="manifest" href="../favicon_io/site.webmanifest">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="manifest" href="site.webmanifest">
 
     <style>
         body {
@@ -20,7 +20,7 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background-image: url(../mcfalfirka.jpg); /* Adjust background as neededd */
+            background-image: url(mcfalfirka.jpg); /* Adjust background as neededd */
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -48,7 +48,7 @@
             background-color: #6a17a4;
         }
         .mine {
-            background-image: url(../lilpisti.png); /* Adjust path as needed */
+            background-image: url(lilpisti.png); /* Adjust path as needed */
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -123,8 +123,7 @@
         const startSound = new Audio("GameStartSound.MP3");
         const mineSound = new Audio('GameOverSound.MP3');
         const winSound = new Audio('WinSound.MP3');
-        const revealSound = new Audio('RevealSound.MP3');
-        const flagSound = new Audio('FlagSound.MP3'); // Add flag sound
+       
 
         // Initialize the game
         function initializeBoard() {
